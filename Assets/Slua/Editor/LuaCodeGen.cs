@@ -244,19 +244,22 @@ namespace SLua
 			};
 
             HashSet<string> namespaces = CustomExport.OnAddCustomNamespace();
-            Assembly assembly = Assembly.Load("Assembly-CSharp");
-			Type[] types = assembly.GetExportedTypes();
+            Assembly assembly;
+            Type[] types;
 
-            // export plugin-dll
-            assembly = Assembly.Load("Assembly-CSharp-firstpass");
-            types = assembly.GetExportedTypes();
-            foreach (Type t in types)
-            {
-                if (t.GetCustomAttributes(typeof(CustomLuaClassAttribute), false).Length > 0 || namespaces.Contains(t.Namespace))
+            try {
+                // export plugin-dll
+                assembly = Assembly.Load("Assembly-CSharp-firstpass");
+                types = assembly.GetExportedTypes();
+                foreach (Type t in types)
                 {
-                    fun(t, null);
+                    if (t.GetCustomAttributes(typeof(CustomLuaClassAttribute), false).Length > 0 || namespaces.Contains(t.Namespace))
+                    {
+                        fun(t, null);
+                    }
                 }
             }
+            catch(Exception){}
 
             // export self-dll
             assembly = Assembly.Load("Assembly-CSharp");
@@ -1758,8 +1761,12 @@ namespace SLua
 					else
 						Write(file, "checkParams(l,{0},out a{1});", n + argstart, n + 1);
 				}
-				else if (IsValueType(t))
-					Write(file, "checkValueType(l,{0},out a{1});", n + argstart, n + 1);
+				else if (IsValueType(t)) {
+					if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>))
+						Write(file, "checkNullable(l,{0},out a{1});", n + argstart, n + 1);
+					else
+						Write(file, "checkValueType(l,{0},out a{1});", n + argstart, n + 1);
+				}
 				else
 					Write(file, "checkType(l,{0},out a{1});", n + argstart, n + 1);
 			}
